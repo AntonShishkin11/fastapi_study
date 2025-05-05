@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import asyncio
 from sqlalchemy import select, delete
-from models import User, Roles
+from database.models import User, Roles
 
 async def add_role(name, level):
     PG_URL = 'postgresql+asyncpg://postgres:postgres@localhost:5642/postgres'
