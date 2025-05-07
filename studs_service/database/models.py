@@ -1,11 +1,18 @@
 import asyncio
 
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Column, String, Integer, ForeignKey
 
 class Base(DeclarativeBase):
     pass
+
+class Users(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(200))
 
 class Students(Base):
     __tablename__ = 'students'
@@ -29,6 +36,8 @@ async def create_db():
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
+
+
 
 
 

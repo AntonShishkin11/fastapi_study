@@ -2,10 +2,13 @@ import uvicorn
 from fastapi import FastAPI
 
 from api.v1.students import stud_router
+from api.v1.auth import router
 
 app = FastAPI(title="my_api")
 
 app.include_router(stud_router, prefix="/api/v1/students")
+
+app.include_router(router)
 
 
 if __name__ == "__main__":
