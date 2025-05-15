@@ -36,6 +36,3 @@ async def login(user: UserIn, db: AsyncSession = Depends(get_async_session)):
     token = create_token({"sub": user.username})
     return {"access_token": token}
 
-@router.post("/logout")
-async def logout():
-    return {"message": "Logout client-side only — delete token manually"}

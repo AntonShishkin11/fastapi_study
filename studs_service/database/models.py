@@ -1,11 +1,19 @@
 import asyncio
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer
+
+from config import DATABASE_URL
+
 
 class Base(DeclarativeBase):
     pass
+
 
 class Users(Base):
     __tablename__ = "users"
@@ -13,6 +21,7 @@ class Users(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(200))
+
 
 class Students(Base):
     __tablename__ = 'students'
@@ -29,18 +38,11 @@ class Students(Base):
 
 
 async def create_db():
-    PG_URL = 'postgresql+asyncpg://postgres:postgres@localhost:5442/postgres'
-
-    engine = create_async_engine(PG_URL)
+    engine = create_async_engine(DATABASE_URL)
 
     async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
-
-
-
 
 
 if __name__ == '__main__':
     asyncio.run(create_db())
-

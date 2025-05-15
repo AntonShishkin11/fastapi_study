@@ -2,22 +2,50 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, HTTPException
 
-from database.models import Students
-from database.stud_service import stud_service
+from services.stud_service import stud_service
 from schemes.scheme import Student, StudentUpdate
+from celery_worker.tasks import load_students_task, delete_students_task
 
 stud_router = APIRouter()
+
 
 @stud_router.get("/get_students/", status_code=HTTPStatus.OK)
 async def get_students():
     return await stud_service.get_students()
+
+
+@stud_router.get("/get_stfac/", status_code=HTTPStatus.OK)
+async def get_students_by_faculty(faculty: str):
+    return await stud_service.get_students_by_faculty(faculty)
+
+
+@stud_router.get('/courses/', status_code=HTTPStatus.OK)
+async def get_unique_courses():
+    return await stud_service.get_unique_courses()
+
+
+@stud_router.get('/average_mark/', status_code=HTTPStatus.OK)
+async def get_average_mark_by_faculty(faculty: str):
+    return await stud_service.get_average_mark_by_faculty(faculty)
+
+
+@stud_router.get('/lower_mark/', status_code=HTTPStatus.OK)
+async def get_low_mark_students_by_course(course: str):
+    return await stud_service.get_low_mark_students_by_course(course)
+
+
+@stud_router.get('/clear_students/', status_code=HTTPStatus.OK)
+async def clear_students():
+    return await stud_service.clear_students()
+
 
 @stud_router.post("/add_stud/", status_code=HTTPStatus.ACCEPTED)
 async def add_stud(input: Student):
     student = await stud_service.add_stud(input.last_name, input.first_name, input.faculty, input.course, input.mark)
     return student
 
-@stud_router.patch("update_stud", status_code=HTTPStatus. ACCEPTED)
+
+@stud_router.patch("update_stud", status_code=HTTPStatus.ACCEPTED)
 async def update_stud(id: int, input: StudentUpdate):
     # Словарь только с переданными (не None) полями
     update_data = {k: v for k, v in input.dict().items() if v is not None}
@@ -28,6 +56,18 @@ async def update_stud(id: int, input: StudentUpdate):
         raise HTTPException(status_code=404, detail="Студент не найден")
     return updated_student
 
+
 @stud_router.delete("/del_stud/", status_code=HTTPStatus.OK)
 async def del_stud(id: int):
     return await stud_service.del_stud(id)
+
+
+@stud_router.post("/load_studs/", status_code=HTTPStatus.OK)
+async def load_students_async(path: str):
+    load_students_task.delay(path)
+    return {"message": f"Started loading students from {path}"}
+
+@stud_router.post("/delete_studs_async/")
+async def delete_students_async(ids: list[int]):
+    delete_students_task.delay(ids)
+    return {"message": f"Started deleting students with IDs: {ids}"}
