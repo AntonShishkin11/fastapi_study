@@ -1,6 +1,7 @@
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from cache_redis.redis_service import get_cache, set_cache, delete_cache
+from config import DATABASE_URL
 
 from database.models import Students
 
@@ -8,8 +9,6 @@ from database.models import Students
 class StudentService():
     def __init__(self, db_url):
         self.db_url = db_url
-
-    # Убираем get_async_session, т.к. сессия теперь приходит из вне
 
     async def get_students(self, db: AsyncSession):
         cache_key = "students_all"
@@ -24,6 +23,12 @@ class StudentService():
             item.pop('_sa_instance_state', None)
         await set_cache(cache_key, data, ex=60)
         return data
+
+    async def get_student_by_id(self, db: AsyncSession, id):
+
+        result = await db.execute(select(Students).where(Students.id == id))
+        student = result.scalars().first()
+        return student
 
     async def add_stud(self, db: AsyncSession, last_name, first_name, faculty, course, mark):
         student = Students(last_name=last_name, first_name=first_name, faculty=faculty, course=course, mark=mark)
@@ -104,10 +109,10 @@ class StudentService():
         return data
 
     async def clear_students(self, db: AsyncSession):
-        await db.execute(delete(Students))
+        await db.execute(text('TRUNCATE TABLE students RESTART IDENTITY CASCADE;'))
         await db.commit()
         await delete_cache("students_all")
         return {"message": "All students cleared"}
 
 
-stud_service = StudentService(db_url="postgresql+asyncpg://postgres:postgres@localhost:5442/postgres")
+stud_service = StudentService(db_url=DATABASE_URL)

@@ -14,6 +14,13 @@ stud_router = APIRouter()
 async def get_students(db: AsyncSession = Depends(get_async_session)):
     return await stud_service.get_students(db)
 
+@stud_router.get("/get_student_by_id/", status_code=HTTPStatus.OK)
+async def del_stud(id: int, db: AsyncSession = Depends(get_async_session)):
+    student = await stud_service.get_student_by_id(db, id)
+    if not student:
+        raise HTTPException(status_code=404, detail='Студент не найден')
+    return student
+
 
 @stud_router.get("/get_stfac/", status_code=HTTPStatus.OK)
 async def get_students_by_faculty(faculty: str, db: AsyncSession = Depends(get_async_session)):

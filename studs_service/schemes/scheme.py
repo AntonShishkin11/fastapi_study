@@ -8,7 +8,7 @@ class Student(BaseModel):
     first_name: str = Field(default='Не указано')
     faculty: str = Field(default='Не указан')
     course: str = Field(default='Не указан')
-    mark: int = Field(default='0')
+    mark: int = Field(default=0)
 
 class StudentUpdate(BaseModel):
     last_name: Optional[str] = None
