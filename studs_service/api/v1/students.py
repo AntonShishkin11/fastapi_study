@@ -15,7 +15,7 @@ async def get_students(db: AsyncSession = Depends(get_async_session)):
     return await stud_service.get_students(db)
 
 @stud_router.get("/get_student_by_id/", status_code=HTTPStatus.OK)
-async def del_stud(id: int, db: AsyncSession = Depends(get_async_session)):
+async def get_student_by_id(id: int, db: AsyncSession = Depends(get_async_session)):
     student = await stud_service.get_student_by_id(db, id)
     if not student:
         raise HTTPException(status_code=404, detail='Студент не найден')

@@ -16,9 +16,9 @@ class TestApi:
         ("O'Connor", "Jean-Luc", 'ФМХФ', 'ФТФ-1', 5),  # специальные символы
     ])
     @pytest.mark.asyncio(loop_scope='session')
-    async def test_add_stud(self, last_name, first_name, faculty, course, mark):
+    async def test_add_stud(self, last_name, first_name, faculty, course, mark, base_url_api):
         async with aiohttp.ClientSession() as session:
-            req_url = 'http://localhost:8000/api/v1/students/add_stud/'
+            req_url = f'{base_url_api}/add_stud/'
 
             query_data = {
                 'last_name': last_name,
@@ -32,7 +32,7 @@ class TestApi:
             assert response.status == HTTPStatus.ACCEPTED
 
             # Проверка, что студент появился в таблице
-            get_url = 'http://localhost:8000/api/v1/students/get_students/'
+            get_url = f'{base_url_api}/get_students/'
             response_get = await session.get(get_url)
             assert response_get.status == HTTPStatus.OK
 
@@ -43,9 +43,9 @@ class TestApi:
             ), "Added student not found in the list"
 
     @pytest.mark.asyncio(loop_scope='session')
-    async def test_get_students(self):
+    async def test_get_students(self, base_url_api):
         async with aiohttp.ClientSession() as session:
-            get_url = 'http://localhost:8000/api/v1/students/get_students/'
+            get_url = f'{base_url_api}/get_students/'
             response = await session.get(get_url)
 
             assert response.status == HTTPStatus.OK
@@ -60,9 +60,9 @@ class TestApi:
 
     @pytest.mark.parametrize('id', [1, 2, 40, 99])
     @pytest.mark.asyncio(loop_scope='session')
-    async def test_get_student_by_id(self, id):
+    async def test_get_student_by_id(self, id, base_url_api):
         async with aiohttp.ClientSession() as session:
-            get_url = f'http://localhost:8000/api/v1/students/get_student_by_id/?id={id}'
+            get_url = f'{base_url_api}/get_student_by_id/?id={id}'
             response = await session.get(get_url)
 
             status = response.status
@@ -76,11 +76,42 @@ class TestApi:
                 error_data = await response.json()
                 assert 'detail' in error_data
 
+    @pytest.mark.parametrize('id, last_name, first_name, faculty, course, mark', [
+        (1, 'Серега', 'Шуманов', 'ФфКН', 'ИыКТ', 12)
+    ])
     @pytest.mark.asyncio(loop_scope='session')
-    async def test_clear_studs(self):
+    async def test_update_stud(self, id, last_name, first_name, faculty, course, mark, base_url_api):
         async with aiohttp.ClientSession() as session:
-            req_url = 'http://localhost:8000/api/v1/students/clear_students/'
-            get_url = 'http://localhost:8000/api/v1/students/get_students/'
+            req_url = f'{base_url_api}/update_stud/?id={id}'
+
+            query_data = {
+                'last_name': last_name,
+                'first_name': first_name,
+                'faculty': faculty,
+                'course': course,
+                'mark': mark
+            }
+
+            response = await session.patch(req_url, json=query_data)
+            assert response.status == HTTPStatus.ACCEPTED
+
+            # Проверка, что студент появился в таблице
+            get_url = f'{base_url_api}/get_student_by_id/?id={id}'
+            response_get = await session.get(get_url)
+            assert response_get.status == HTTPStatus.OK
+
+            student = await response_get.json()
+            assert student['last_name'] == last_name
+            assert student['first_name'] == first_name
+            assert student['faculty'] == faculty
+            assert student['course'] == course
+            assert student['mark'] == mark
+
+    @pytest.mark.asyncio(loop_scope='session')
+    async def test_clear_studs(self, base_url_api):
+        async with aiohttp.ClientSession() as session:
+            req_url = f'{base_url_api}/clear_students/'
+            get_url = f'{base_url_api}/get_students/'
 
             # Проверяем, что в базе студенты есть
             response_before = await session.get(get_url)
@@ -98,38 +129,3 @@ class TestApi:
             response_after = await session.get(get_url)
             data_after = await response_after.json()
             assert data_after == []
-
-
-    @pytest.mark.parametrize('id, last_name, first_name, faculty, course, mark', [
-        (1, 'Серега', 'Шуманов', 'ФфКН', 'ИыКТ', 12)
-    ])
-    @pytest.mark.asyncio(loop_scope='session')
-    async def test_update_stud(self, id, last_name, first_name, faculty, course, mark):
-        async with aiohttp.ClientSession() as session:
-            req_url = f'http://localhost:8000/api/v1/students/clear_students/?id={id}'
-
-            query_data = {
-                'last_name': last_name,
-                'first_name': first_name,
-                'faculty': faculty,
-                'course': course,
-                'mark': mark
-            }
-
-            response = await session.patch(req_url, json=query_data)
-            assert response.status == HTTPStatus.ACCEPTED
-
-            # Проверка, что студент появился в таблице
-            get_url = 'http://localhost:8000/api/v1/students/get_students/'
-            response_get = await session.get(get_url)
-            assert response_get.status == HTTPStatus.OK
-
-            students = await response_get.json()
-            assert any(
-                s['last_name'] == last_name and s['first_name'] == first_name and s['faculty'] == faculty
-                and s['course'] == course and s['mark'] == mark for s in students
-            ), "Added student not found in the list"
-
-
-
-
