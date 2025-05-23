@@ -9,13 +9,14 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5442:5432"  # Проброс порта явно
+      - "5442:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: always
 
   redis:
-    image: redis
+    image: redis:latest
+    container_name: my-redis
     ports:
       - "6379:6379"
     restart: always
@@ -30,6 +31,11 @@ services:
       - .:/app
     environment:
       PYTHONPATH: /app
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
     restart: "no"
 
   celery_worker:
@@ -40,6 +46,13 @@ services:
       - .:/app
     environment:
       PYTHONPATH: /app
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
     depends_on:
       - redis
       - postgres
@@ -55,9 +68,16 @@ services:
       - .:/app
     environment:
       PYTHONPATH: /app
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
     depends_on:
-      - postgres
       - redis
+      - postgres
     restart: always
 
 volumes:

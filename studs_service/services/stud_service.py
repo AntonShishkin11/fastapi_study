@@ -1,3 +1,5 @@
+import csv
+
 from sqlalchemy import select, func, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from cache_redis.redis_service import get_cache, set_cache, delete_cache
@@ -42,7 +44,7 @@ class StudentService():
         await db.execute(delete(Students).where(Students.id == id))
         await db.commit()
         await delete_cache("students_all")
-        return {"message": f"Student with id={id} deleted"}
+        return {"message": f"Студент с id={id} удален"}
 
     async def update_stud(self, db: AsyncSession, id, **kwargs):
         stud = await db.get(Students, id)
@@ -91,7 +93,10 @@ class StudentService():
             return cached
 
         result = await db.execute(select(func.avg(Students.mark)).where(Students.faculty == faculty_name))
-        average = result.scalar()
+        average = result.scalars().one()
+
+        average = float(average) if average is not None else None
+
         await set_cache(cache_key, average, ex=60)
         return round(average, 2) if average is not None else None
 
@@ -107,6 +112,23 @@ class StudentService():
         for item in data:
             item.pop('_sa_instance_state', None)
         return data
+
+    async def load_from_csv(self, db: AsyncSession, filepath):
+
+        with open(filepath, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)
+            for row in reader:
+                last_name, first_name, faculty, course, mark = row
+                student = Students(
+                    last_name=last_name.strip(),
+                    first_name=first_name.strip(),
+                    faculty=faculty.strip(),
+                    course=course.strip(),
+                    mark=int(mark.strip())
+                )
+                db.add(student)
+            await db.commit()
 
     async def clear_students(self, db: AsyncSession):
         await db.execute(text('TRUNCATE TABLE students RESTART IDENTITY CASCADE;'))

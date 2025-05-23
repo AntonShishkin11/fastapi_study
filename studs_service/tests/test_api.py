@@ -107,6 +107,26 @@ class TestApi:
             assert student['course'] == course
             assert student['mark'] == mark
 
+    @pytest.mark.parametrize('faculty', ['ФИЗФАК', 'ФМХФ'])
+    @pytest.mark.asyncio(loop_scope='session')
+    async def test_get_studs_by_fac(self, faculty, base_url_api):
+        async with aiohttp.ClientSession() as session:
+            req_url = f'{base_url_api}/get_stfac/?faculty={faculty}'
+            get_url = f'{base_url_api}/get_students/'
+
+            response_studs = await session.get(get_url)
+            data = await response_studs.json()
+            assert isinstance(data, list)
+            assert len(data) > 0
+
+            response = await session.get(req_url)
+            assert response.status == HTTPStatus.OK
+            data = await response.json()
+            assert isinstance(data, list)
+            assert all(student["faculty"] == faculty for student in data)
+
+
+
     @pytest.mark.asyncio(loop_scope='session')
     async def test_clear_studs(self, base_url_api):
         async with aiohttp.ClientSession() as session:
@@ -117,7 +137,7 @@ class TestApi:
             response_before = await session.get(get_url)
             data_before = await response_before.json()
             assert isinstance(data_before, list)
-            assert len(data_before) > 0, "Expected students to be present before clearing"
+            assert len(data_before) > 0, "Ожидается что база будет не пустой перед отчисткой"
 
             response_clear = await session.get(req_url)
             assert response_clear.status == HTTPStatus.OK
@@ -128,4 +148,4 @@ class TestApi:
             # Проверяем, что база после очистки пуста
             response_after = await session.get(get_url)
             data_after = await response_after.json()
-            assert data_after == []
+            assert data_after == {"detail": "Студентов в базе нет"}
