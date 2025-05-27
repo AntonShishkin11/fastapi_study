@@ -1,26 +1,39 @@
-import asyncio
-import os
-
 from celery import shared_task
-
-from database.session import async_session
-from services.stud_service import StudentService
-
+from database.sync_session import SessionLocal
+from database.models import Students
+import pandas as pd
 
 @shared_task
-def load_students_task(file_path: str):
-
-    async def run():
-        async with async_session() as db:
-            await StudentService.load_from_csv(db, file_path)
-
+def import_csv_task(csv_path: str):
+    session = SessionLocal()
     try:
-        asyncio.run(run())
+        df = pd.read_csv(csv_path)
+        for _, row in df.iterrows():
+            student = Students(
+                last_name=row["last_name"],
+                first_name=row["first_name"],
+                faculty=row["faculty"],
+                course=row["course"],
+                mark=int(row["mark"])
+            )
+            session.add(student)
+        session.commit()
+        return f"Imported {len(df)} students from {csv_path}"
+    except Exception as e:
+        session.rollback()
+        return f"Error importing CSV: {str(e)}"
     finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        session.close()
 
-# @shared_task
-# def delete_students_task(ids: list[int]):
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(StudentService.delete_by_ids(ids))
+@shared_task
+def delete_students_task(ids: list[int]):
+    session = SessionLocal()
+    try:
+        deleted = session.query(Students).filter(Students.id.in_(ids)).delete(synchronize_session=False)
+        session.commit()
+        return f"Deleted {deleted} students with IDs {ids}"
+    except Exception as e:
+        session.rollback()
+        return f"Error deleting students: {str(e)}"
+    finally:
+        session.close()

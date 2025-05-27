@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
@@ -16,3 +16,9 @@ class StudentUpdate(BaseModel):
     faculty: Optional[str] = None
     course: Optional[str] = None
     mark: Optional[int] = None
+
+class DeleteStudentsRequest(BaseModel):
+    ids: List[int]
+
+class ImportCSVRequest(BaseModel):
+    path: str

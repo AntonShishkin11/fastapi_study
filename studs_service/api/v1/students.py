@@ -1,13 +1,11 @@
-import uuid
 from http import HTTPStatus
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.session import get_async_session
 from services.stud_service import stud_service
-from schemes.scheme import Student, StudentUpdate
-from celery_worker.tasks import load_students_task#, delete_students_task
+from schemes.scheme import Student, StudentUpdate, DeleteStudentsRequest, ImportCSVRequest
+from celery_worker.tasks import import_csv_task, delete_students_task
 
 stud_router = APIRouter()
 
@@ -86,22 +84,23 @@ async def del_stud(id: int, db: AsyncSession = Depends(get_async_session)):
     return await stud_service.del_stud(db, id)
 
 
-@stud_router.post("/upload_csv/")
-async def upload_csv(file: UploadFile = File(...)):
-    temp_dir = Path("temp")
-    temp_dir.mkdir(exist_ok=True)
-
-    file_path = temp_dir / f"{uuid.uuid4()}.csv"
-
-    with open(file_path, "wb") as f_out:
-        f_out.write(await file.read())
-
-    load_students_task.delay(str(file_path))
-
-    return {"status": "Загрузка студентов началась"}
+@stud_router.post("/upload_csv_path/")
+async def upload_csv_by_path(data: ImportCSVRequest):
+    task = import_csv_task.delay(data.path)
+    return {
+        "detail": "Импорт запущен",
+        "task_id": task.id,
+        "file_path": data.path
+    }
 
 
-# @stud_router.post("/delete_studs_async/")
-# async def delete_students_async(ids: list[int]):
-#     delete_students_task.delay(ids)
-#     return {"message": f"Удаление студентов с ID: {ids}"}
+
+@stud_router.post("/delete_studs/")
+async def delete_students_async(data: DeleteStudentsRequest):
+    task = delete_students_task.delay(data.ids)
+    return {
+        "detail": "Удаление запущено в фоне",
+        "task_id": task.id,
+        "ids": data.ids
+    }
+
